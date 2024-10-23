@@ -1,24 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-
     <item
-        android:id="@+id/library"
-        android:icon="@drawable/music_video"
+        android:id="@+id/library_item"
+        android:icon="@drawable/library_music_icon"
         android:title="Library" />
     <item
-        android:id="@+id/discover"
-        android:icon="@drawable/frame_inspect"
+        android:id="@+id/discover_item"
+        android:icon="@drawable/search_icon"
         android:title="Discover" />
-    <item
-        android:id="@+id/chart"
-        android:icon="@drawable/insights"
-        android:title="Zingchart"/>
-    <item
-        android:id="@+id/radio"
-        android:icon="@drawable/radio"
-        android:title="Radio" />
-    <item
-        android:id="@+id/person"
-        android:icon="@drawable/profile"
-        android:title="Person" />
 </menu>
