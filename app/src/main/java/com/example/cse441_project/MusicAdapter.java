@@ -39,13 +39,12 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder>{
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //Navigate to another activity
-//                MyMediaPlayer.getInstance().reset();
-//                MyMediaPlayer.currentIndex = holder.getAdapterPosition();
-//                Intent intent = new Intent(context, MusicPlayerActivity.class);
-//                intent.putExtra("LIST",songsList);
-//                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//                context.startActivity(intent);
+                MyMediaPlayer.getInstance().reset();
+                MyMediaPlayer.currentIndex = holder.getAdapterPosition();
+                Intent intent = new Intent(context, MusicPlayerActivity.class);
+                intent.putExtra("LIST",songsList);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
             }
         });
     }
