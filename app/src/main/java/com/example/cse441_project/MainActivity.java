@@ -3,9 +3,12 @@ package com.example.cse441_project;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -30,32 +33,19 @@ import com.google.android.material.navigation.NavigationView;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
-    ActivityMainBinding binding;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
-        replaceFragment(new LibraryFragment());
+        setContentView(R.layout.activity_main);
 
-        binding.bottomNavigationView.setOnItemSelectedListener(item  ->  {
-            int id = item.getItemId();
-            if(id == R.id.library_item) {
-                replaceFragment(new LibraryFragment());
+        Button btn_upload = findViewById(R.id.btn_upload);
+        btn_upload.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, UploadActivity.class);
+                startActivity(intent);
             }
-            else if(id == R.id.discover_item) {
-                replaceFragment(new DiscoverFragment());
-            }
-            return true;
         });
-    }
 
-    private void replaceFragment(Fragment fragment) {
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        FragmentTransaction  fragmentTransaction  = fragmentManager.beginTransaction();
-
-        fragmentTransaction.replace(R.id.frameLayout2,fragment);
-        fragmentTransaction.commit();
     }
 }
