@@ -18,17 +18,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> implements Filterable {
+public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder>{
 
-    public ArrayList<AudioModel> songsList;
-    public ArrayList<AudioModel> songsListAll;
+    ArrayList<AudioModel> songsList = new ArrayList<>();
     Context context;
+
+
 
     public MusicAdapter(ArrayList<AudioModel> songsList, Context context){
         this.songsList = songsList;
         this.context = context;
-        this.songsListAll = new ArrayList<>(songsList);
     }
+
 
 
     @Override
@@ -60,9 +61,15 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
 
     @Override
     public int getItemCount() {
-
         return songsList.size();
     }
+
+    public void filterList(ArrayList<AudioModel> filteredList) {
+
+        songsList = filteredList;
+        notifyDataSetChanged();
+    }
+
 
     public class ViewHolder extends RecyclerView.ViewHolder{
 
@@ -75,36 +82,5 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
             iconView = itemView.findViewById(R.id.icon_view);
         }
     }
-    @Override
-    public Filter getFilter() {
 
-        return new Filter() {
-            @Override
-            protected FilterResults performFiltering(CharSequence charSequence){
-                String strSearch = charSequence.toString();
-                if(strSearch.isEmpty()){
-                    songsList = songsListAll;
-                } else {
-                    ArrayList<AudioModel> list = new ArrayList<>();
-                    for(AudioModel audioModel : songsListAll){
-                        if(audioModel.getTitle().toLowerCase().contains(strSearch.toLowerCase())){
-                            list.add(audioModel);
-                        }
-
-                    }
-                    songsList = (ArrayList<AudioModel>) list;
-
-                }
-                FilterResults filterResults = new FilterResults();
-                filterResults.values = songsList;
-                return filterResults;
-            }
-            @SuppressLint("NotifyDataSetChanged")
-            @Override
-            protected void publishResults(CharSequence charSequence, FilterResults filterResults) {
-                songsList = (ArrayList<AudioModel>) filterResults.values;
-                notifyDataSetChanged();
-            }
-        };
-    }
 }

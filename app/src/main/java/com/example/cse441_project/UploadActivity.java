@@ -1,5 +1,7 @@
 package com.example.cse441_project;
 
+import static java.util.Locale.filter;
+
 import android.Manifest;
 import android.app.SearchManager;
 import android.content.Context;
@@ -15,7 +17,6 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
@@ -24,39 +25,53 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import java.io.File;
 import java.util.ArrayList;
 
 public class UploadActivity extends AppCompatActivity {
-    private RecyclerView recyclerView;
-    private TextView noMusicTextView;
-    private MusicAdapter MusicAdapter;
-    private SearchView searchView;
+
+    RecyclerView recyclerView;
+    TextView noMusicTextView;
+    MusicAdapter MusicAdapter;
+    SearchView searchView;
 
     ArrayList<AudioModel> SongsList =  new ArrayList<>();
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_upload);
-        // Thiết lập Toolbar thay cho ActionBar
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
-
+        searchView = findViewById(R.id.searchView);
 
         recyclerView = findViewById(R.id.recycle_view);
         noMusicTextView = findViewById(R.id.No_Songs);
 
-        MusicAdapter =new MusicAdapter(SongsList,getApplicationContext());
+
+        MusicAdapter =new MusicAdapter(SongsList, getApplicationContext());
         recyclerView.setAdapter(MusicAdapter);
+
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener(){
+
+            @Override
+            public boolean onQueryTextSubmit(String query){
+                return false;
+
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                filter(newText);
+                return true;
+            }
+        });
+
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (!checkPermission()) {
                 requestPermission();
-                return;
+                return ;
             }
         }
         String[] projection = {
@@ -86,16 +101,24 @@ public class UploadActivity extends AppCompatActivity {
         }
     }
 
+    private void filter(String newText) {
+
+        ArrayList<AudioModel> filteredList = new ArrayList<>();
+
+        for (AudioModel item : SongsList) {
+            if (item.getTitle().toLowerCase().contains(newText.toLowerCase())) {
+                filteredList.add(item);
+            }
+            MusicAdapter.filterList(filteredList);
+        }
+
+    }
 
 
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     boolean checkPermission(){
         int result = ContextCompat.checkSelfPermission(UploadActivity.this, android.Manifest.permission.READ_MEDIA_AUDIO);
-        if(result == PackageManager.PERMISSION_GRANTED){
-            return true;
-        }else {
-            return false;
-        }
+        return result == PackageManager.PERMISSION_GRANTED;
     }
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     void requestPermission(){
@@ -105,31 +128,8 @@ public class UploadActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(UploadActivity.this,new String[]{Manifest.permission.READ_MEDIA_AUDIO},200);
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.main_menu, menu);
 
-        MenuItem searchItem = menu.findItem(R.id.action_search);
 
-        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        searchView = (SearchView) menu.findItem(R.id.action_search).getActionView();
-        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-        searchView.setMaxWidth(Integer.MAX_VALUE);
 
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                MusicAdapter.getFilter().filter(query);
-                return false;
-            }
 
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                MusicAdapter.getFilter().filter(newText);
-                return false;
-            }
-        });
-        return true;
-    }
 }
