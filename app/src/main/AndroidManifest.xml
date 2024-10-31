@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
     <application
         android:allowBackup="true"
@@ -15,17 +15,29 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CSE441_PROJECT"
         tools:targetApi="31">
+        <service
+            android:name=".PlayerService"
+            android:enabled="true"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false"></service>
+
         <activity
             android:name=".SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity android:name=".MainActivity" />
-        <activity android:name=".UploadActivity"/>
-        <activity android:name=".MusicPlayerActivity"/>
+        <activity android:name=".UploadActivity" />
+        <activity android:name=".MusicPlayerActivity" />
+
+        <service
+            android:name=".MusicService"
+            android:enabled="true"
+            android:exported="false" />
     </application>
 
 </manifest>
