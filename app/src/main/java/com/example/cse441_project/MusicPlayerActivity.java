@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
     TextView titleTv,currentTv,totalTv;
     SeekBar seekBar;
     ImageView pause,play,pause_play,music_Icon;
-    NotificationManager notificationManager;
     ArrayList<AudioModel> songsList;
     AudioModel currentSong;
     MediaPlayer mediaPlayer = MyMediaPlayer.getInstance();
@@ -168,7 +167,6 @@ import java.util.concurrent.TimeUnit;
             pause_play.setImageResource(R.drawable.ic_baseline_pause_circle_filled_24);
             startAnimation();
         }
-
      }
 
      @SuppressLint("DefaultLocale")
@@ -179,30 +177,4 @@ import java.util.concurrent.TimeUnit;
                  TimeUnit.MILLISECONDS.toMinutes(millis) % TimeUnit.HOURS.toMinutes(1),
                  TimeUnit.MILLISECONDS.toSeconds(millis) % TimeUnit.MINUTES.toSeconds(1));
      }
-
-     private void startAnimation() {
-         RotateAnimation rotateAnimation = new RotateAnimation(
-                 0f, 360f,
-                 RotateAnimation.RELATIVE_TO_SELF, 0.5f,
-                 RotateAnimation.RELATIVE_TO_SELF, 0.5f
-         );
-         rotateAnimation.setDuration(5000);
-         rotateAnimation.setRepeatCount(Animation.INFINITE);
-         rotateAnimation.setInterpolator(new LinearInterpolator());
-         music_Icon.startAnimation(rotateAnimation);
-     }
-
-     private void setAlbumArt(String filepath) throws IOException {
-         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-         retriever.setDataSource(filepath);
-         byte[] art = retriever.getEmbeddedPicture();
-         if (art != null) {
-             music_Icon.setImageBitmap(BitmapFactory.decodeByteArray(art, 0, art.length));
-         } else {
-             music_Icon.setImageResource(R.drawable.musicicon);
-         }
-
-         retriever.release();
-     }
-
  }
