@@ -1,5 +1,7 @@
  package com.example.cse441_project;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
@@ -7,15 +9,18 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.view.View;
 import android.view.animation.Animation;
@@ -24,6 +29,9 @@ import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.android.exoplayer2.ExoPlayer;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,7 +51,12 @@ import java.util.concurrent.TimeUnit;
     int position = 0;
     boolean isPlaying = false;
 
-    @Override
+     boolean isBound = false;
+     ExoPlayer player;
+     private static final String permission = android.Manifest.permission.READ_EXTERNAL_STORAGE;
+     private ActivityResultLauncher<String> storagePermissionLauncher;
+
+     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music_player);
@@ -108,7 +121,41 @@ import java.util.concurrent.TimeUnit;
 
             }
         });
+         // Khởi tạo launcher
+         storagePermissionLauncher = registerForActivityResult(
+                 new ActivityResultContracts.RequestPermission(),
+                 isGranted -> {
+                     if (isGranted) {
+                         // Quyền đã được cấp, bạn có thể tiếp tục các tác vụ cần thiết
+                         doBindService();
+                     } else {
+                         // Quyền bị từ chối, hiển thị thông báo cho người dùng
+                         Toast.makeText(this, "Permission denied to access storage", Toast.LENGTH_SHORT).show();
+                     }
+                 }
+         );
     }
+
+
+     private void doBindService() {
+         Intent playerServiceIntent = new Intent(this, PlayerService.class);
+         bindService(playerServiceIntent, playerServiceConnection, Context.BIND_AUTO_CREATE);
+         isBound = true;
+     }
+     ServiceConnection playerServiceConnection = new ServiceConnection() {
+         @Override
+         public void onServiceConnected(ComponentName name, IBinder service) {
+             PlayerService.ServiceBinder binder = (PlayerService.ServiceBinder) service;
+             player = binder.getService().player;
+             isBound = true;
+             storagePermissionLauncher.launch(permission);
+         }
+
+         @Override
+         public void onServiceDisconnected(ComponentName name) {
+
+         }
+     };
 
     void setResourceWithMusic(){
         currentSong = songsList.get(MyMediaPlayer.currentIndex);
