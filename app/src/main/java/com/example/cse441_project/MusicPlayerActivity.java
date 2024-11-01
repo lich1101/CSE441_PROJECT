@@ -1,23 +1,19 @@
- package com.example.cse441_project;
+// Thêm gói và import như bình thường
+package com.example.cse441_project;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
-import android.app.Notification;
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -35,28 +31,24 @@ import com.google.android.exoplayer2.ExoPlayer;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
- public class MusicPlayerActivity extends AppCompatActivity{
+public class MusicPlayerActivity extends AppCompatActivity {
 
-    TextView titleTv,currentTv,totalTv;
+    TextView titleTv, currentTv, totalTv;
     SeekBar seekBar;
-    ImageView pause,play,pause_play,music_Icon;
-    NotificationManager notificationManager;
+    ImageView pause, play, pause_play, music_Icon;
     ArrayList<AudioModel> songsList;
     AudioModel currentSong;
     MediaPlayer mediaPlayer = MyMediaPlayer.getInstance();
-
     int position = 0;
     boolean isPlaying = false;
+    boolean isBound = false;
+    ExoPlayer player;
+    private static final String permission = android.Manifest.permission.READ_EXTERNAL_STORAGE;
+    private ActivityResultLauncher<String> storagePermissionLauncher;
 
-     boolean isBound = false;
-     ExoPlayer player;
-     private static final String permission = android.Manifest.permission.READ_EXTERNAL_STORAGE;
-     private ActivityResultLauncher<String> storagePermissionLauncher;
-
-     @Override
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music_player);
@@ -71,185 +63,160 @@ import java.util.concurrent.TimeUnit;
         music_Icon = findViewById(R.id.music_image);
 
         titleTv.setSelected(true);
-
         songsList = (ArrayList<AudioModel>) getIntent().getSerializableExtra("LIST");
         setResourceWithMusic();
 
-        MusicPlayerActivity.this.runOnUiThread(new Runnable() {
+        // Thay đổi Handler trong runOnUiThread để không tạo loop đệ quy vô hạn
+        Handler handler = new Handler(Looper.getMainLooper());
+        handler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 if (mediaPlayer != null) {
                     seekBar.setProgress(mediaPlayer.getCurrentPosition());
-                    currentTv.setText(convertToMMSS(mediaPlayer.getCurrentPosition() + ""));
-
-                    if (mediaPlayer.isPlaying()) {
-                        pause_play.setImageResource(R.drawable.ic_baseline_pause_circle_filled_24);
-                    } else {
-                        pause_play.setImageResource(R.drawable.ic_baseline_play_circle_filled_24);
-                    }
+                    currentTv.setText(convertToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())));
+                    pause_play.setImageResource(mediaPlayer.isPlaying() ? R.drawable.ic_baseline_pause_circle_filled_24 : R.drawable.ic_baseline_play_circle_filled_24);
                 }
-                new Handler(Looper.getMainLooper()).postDelayed(this, 100);
+                handler.postDelayed(this, 100);
+            }
+        }, 100);
 
-            }
-        });
-        pause_play.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(mediaPlayer.isPlaying()){
-                    pausePlay();
-                }else{
-                    pausePlay();
-                }
-            }
-        });
+        pause_play.setOnClickListener(v -> pausePlay());
+        play.setOnClickListener(v -> playNextSong());
+        pause.setOnClickListener(v -> playPreviousSong());
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean FromUser) {
-                if (mediaPlayer != null && FromUser) {
-                    mediaPlayer.seekTo(progress);
-                }
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (mediaPlayer != null && fromUser) mediaPlayer.seekTo(progress);
             }
 
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
+            public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
+            public void onStopTrackingTouch(SeekBar seekBar) {}
         });
-         // Khởi tạo launcher
-         storagePermissionLauncher = registerForActivityResult(
-                 new ActivityResultContracts.RequestPermission(),
-                 isGranted -> {
-                     if (isGranted) {
-                         // Quyền đã được cấp, bạn có thể tiếp tục các tác vụ cần thiết
-                         doBindService();
-                     } else {
-                         // Quyền bị từ chối, hiển thị thông báo cho người dùng
-                         Toast.makeText(this, "Permission denied to access storage", Toast.LENGTH_SHORT).show();
-                     }
-                 }
-         );
+
+        storagePermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+            if (isGranted) doBindService();
+            else Toast.makeText(this, "Permission denied to access storage", Toast.LENGTH_SHORT).show();
+        });
     }
 
+    private void doBindService() {
+        Intent playerServiceIntent = new Intent(this, PlayerService.class);
+        bindService(playerServiceIntent, playerServiceConnection, Context.BIND_AUTO_CREATE);
+        isBound = true;
+    }
 
-     private void doBindService() {
-         Intent playerServiceIntent = new Intent(this, PlayerService.class);
-         bindService(playerServiceIntent, playerServiceConnection, Context.BIND_AUTO_CREATE);
-         isBound = true;
-     }
-     ServiceConnection playerServiceConnection = new ServiceConnection() {
-         @Override
-         public void onServiceConnected(ComponentName name, IBinder service) {
-             PlayerService.ServiceBinder binder = (PlayerService.ServiceBinder) service;
-             player = binder.getService().player;
-             isBound = true;
-             storagePermissionLauncher.launch(permission);
-         }
+    private final ServiceConnection playerServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            PlayerService.ServiceBinder binder = (PlayerService.ServiceBinder) service;
+            player = binder.getService().player;
+            isBound = true;
+            storagePermissionLauncher.launch(permission);
+        }
 
-         @Override
-         public void onServiceDisconnected(ComponentName name) {
+        @Override
+        public void onServiceDisconnected(ComponentName name) {}
+    };
 
-         }
-     };
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        doUnBindService();
+    }
 
-    void setResourceWithMusic(){
+    private void doUnBindService() {
+        if (isBound) {
+            unbindService(playerServiceConnection);
+            isBound = false;
+        }
+    }
+
+    private void setResourceWithMusic() {
         currentSong = songsList.get(MyMediaPlayer.currentIndex);
         titleTv.setText(currentSong.getTitle());
         totalTv.setText(convertToMMSS(currentSong.getDuration()));
-        pause_play.setOnClickListener(v-> pausePlay());
-        play.setOnClickListener(v-> playNextSong());
-        pause.setOnClickListener(v-> playPreviousSong());
-
-        if(!mediaPlayer.isPlaying()) {
-            playMusic();
-        }
+        playMusic();
     }
-    public void playMusic(){
+
+    private void playMusic() {
         mediaPlayer.reset();
         try {
             mediaPlayer.setDataSource(currentSong.getPath());
             mediaPlayer.prepare();
-            mediaPlayer.start();
+            mediaPlayer.start(); // Sửa lỗi ở đây bằng cách bỏ dòng dư
             seekBar.setProgress(0);
             seekBar.setMax(mediaPlayer.getDuration());
             isPlaying = true;
 
             setAlbumArt(currentSong.getPath());
             startAnimation();
-        }
-        catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
-     }
-     public void playNextSong(){
-        if (MyMediaPlayer.currentIndex == songsList.size()-1)
-            return;
+    }
 
-        MyMediaPlayer.currentIndex +=1;
+    private void playNextSong() {
+        if (MyMediaPlayer.currentIndex == songsList.size() - 1) return;
+
+        MyMediaPlayer.currentIndex += 1;
         mediaPlayer.reset();
         setResourceWithMusic();
+    }
 
-     }
-     public void playPreviousSong(){
-        if (MyMediaPlayer.currentIndex==0)
-            return;
-        MyMediaPlayer.currentIndex -=1;
+    private void playPreviousSong() {
+        if (MyMediaPlayer.currentIndex == 0) return;
+
+        MyMediaPlayer.currentIndex -= 1;
         mediaPlayer.reset();
         setResourceWithMusic();
+    }
 
-     }
-     public void pausePlay(){
-        if (mediaPlayer.isPlaying()){
+    private void pausePlay() {
+        if (mediaPlayer.isPlaying()) {
             mediaPlayer.pause();
             isPlaying = false;
             pause_play.setImageResource(R.drawable.ic_baseline_play_circle_filled_24);
             music_Icon.clearAnimation();
-        }else{
+        } else {
             mediaPlayer.start();
             isPlaying = true;
             pause_play.setImageResource(R.drawable.ic_baseline_pause_circle_filled_24);
             startAnimation();
         }
+    }
 
-     }
+    @SuppressLint("DefaultLocale")
+    private static String convertToMMSS(String duration) {
+        long millis = Long.parseLong(duration);
+        return String.format("%02d:%02d",
+                TimeUnit.MILLISECONDS.toMinutes(millis) % TimeUnit.HOURS.toMinutes(1),
+                TimeUnit.MILLISECONDS.toSeconds(millis) % TimeUnit.MINUTES.toSeconds(1));
+    }
 
-     @SuppressLint("DefaultLocale")
-     public static String convertToMMSS(String Duration) {
-         long millis = Long.parseLong(Duration);
+    private void startAnimation() {
+        RotateAnimation rotateAnimation = new RotateAnimation(
+                0f, 360f,
+                RotateAnimation.RELATIVE_TO_SELF, 0.5f,
+                RotateAnimation.RELATIVE_TO_SELF, 0.5f
+        );
+        rotateAnimation.setDuration(5000);
+        rotateAnimation.setRepeatCount(Animation.INFINITE);
+        rotateAnimation.setInterpolator(new LinearInterpolator());
+        music_Icon.startAnimation(rotateAnimation);
+    }
 
-         return String.format("%02d:%02d",
-                 TimeUnit.MILLISECONDS.toMinutes(millis) % TimeUnit.HOURS.toMinutes(1),
-                 TimeUnit.MILLISECONDS.toSeconds(millis) % TimeUnit.MINUTES.toSeconds(1));
-     }
-
-     private void startAnimation() {
-         RotateAnimation rotateAnimation = new RotateAnimation(
-                 0f, 360f,
-                 RotateAnimation.RELATIVE_TO_SELF, 0.5f,
-                 RotateAnimation.RELATIVE_TO_SELF, 0.5f
-         );
-         rotateAnimation.setDuration(5000);
-         rotateAnimation.setRepeatCount(Animation.INFINITE);
-         rotateAnimation.setInterpolator(new LinearInterpolator());
-         music_Icon.startAnimation(rotateAnimation);
-     }
-
-     private void setAlbumArt(String filepath) throws IOException {
-         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-         retriever.setDataSource(filepath);
-         byte[] art = retriever.getEmbeddedPicture();
-         if (art != null) {
-             music_Icon.setImageBitmap(BitmapFactory.decodeByteArray(art, 0, art.length));
-         } else {
-             music_Icon.setImageResource(R.drawable.musicicon);
-         }
-
-         retriever.release();
-     }
-
- }
+    private void setAlbumArt(String filepath) throws IOException {
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        retriever.setDataSource(filepath);
+        byte[] art = retriever.getEmbeddedPicture();
+        if (art != null) {
+            music_Icon.setImageBitmap(BitmapFactory.decodeByteArray(art, 0, art.length));
+        } else {
+            music_Icon.setImageResource(R.drawable.musicicon);
+        }
+        retriever.release();
+    }
+}
