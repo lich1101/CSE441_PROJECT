@@ -67,5 +67,4 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder>{
             iconView = itemView.findViewById(R.id.icon_view);
         }
     }
-
 }

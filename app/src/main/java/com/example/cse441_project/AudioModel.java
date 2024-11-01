@@ -13,31 +13,17 @@ public class AudioModel implements Serializable {
         this.duration=duration;
     }
 
-    public String getPath() {
+    public String getPath() { return path; }
 
-        return path;
-    }
+    public void setPath(String path) { this.path = path; }
 
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public String getTitle(){
-
-        return title;
-    }
+    public String getTitle(){  return title; }
 
     public void setTitle(String title){
         this.title = title;
     }
 
-    public String getDuration(){
+    public String getDuration(){ return duration; }
 
-        return duration;
-    }
-
-    public void setDuration(String duration){
-
-        this.duration = duration;
-    }
+    public void setDuration(String duration){ this.duration = duration; }
 }
