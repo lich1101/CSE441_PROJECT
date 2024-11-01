@@ -8,7 +8,6 @@ import android.app.Service;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
-
 import android.os.Binder;
 import android.os.IBinder;
 import android.widget.ImageView;
@@ -16,10 +15,9 @@ import android.widget.ImageView;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
-//import android.media.AudioAttributes;
-import com.google.android.exoplayer2.audio.AudioAttributes;
 
 import com.google.android.exoplayer2.C;
+import com.google.android.exoplayer2.audio.AudioAttributes;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.ui.PlayerNotificationManager;
@@ -49,8 +47,8 @@ public class PlayerService extends Service {
 
         player = new ExoPlayer.Builder(getApplicationContext()).build();
         AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .setUsage(C.USAGE_MEDIA) // Sử dụng hằng số từ ExoPlayer
+                .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC) // Sử dụng hằng số từ ExoPlayer
                 .build();
         player.setAudioAttributes(audioAttributes, true);
 
@@ -72,8 +70,20 @@ public class PlayerService extends Service {
         notificationManager.setPriority(NotificationCompat.PRIORITY_MAX);
         notificationManager.setUseRewindAction(false);
         notificationManager.setUseFastForwardAction(false);
+
+        // Khởi chạy Foreground Service với thông báo
+        startForeground(notificationId, createNotification());
     }
 
+    private Notification createNotification() {
+        // Tạo một thông báo cơ bản cho dịch vụ nền
+        return new NotificationCompat.Builder(this, getResources().getString(R.string.app_name) + "Music Channel")
+                .setContentTitle("Music Player")
+                .setContentText("Playing music in the background")
+                .setSmallIcon(R.drawable.musicicon) // Icon cho thông báo
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .build();
+    }
     @Override
     public void onDestroy() {
         if (player.isPlaying()) player.stop();

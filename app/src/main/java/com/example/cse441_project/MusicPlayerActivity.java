@@ -1,4 +1,3 @@
-// Thêm gói và import như bình thường
 package com.example.cse441_project;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -66,7 +65,7 @@ public class MusicPlayerActivity extends AppCompatActivity {
         songsList = (ArrayList<AudioModel>) getIntent().getSerializableExtra("LIST");
         setResourceWithMusic();
 
-        // Thay đổi Handler trong runOnUiThread để không tạo loop đệ quy vô hạn
+        // Thiết lập Handler cập nhật thời gian và trạng thái nút play/pause
         Handler handler = new Handler(Looper.getMainLooper());
         handler.postDelayed(new Runnable() {
             @Override
@@ -96,10 +95,18 @@ public class MusicPlayerActivity extends AppCompatActivity {
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
+        // Yêu cầu quyền và khởi động dịch vụ nền
         storagePermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-            if (isGranted) doBindService();
-            else Toast.makeText(this, "Permission denied to access storage", Toast.LENGTH_SHORT).show();
+            if (isGranted) {
+                Intent playerServiceIntent = new Intent(this, PlayerService.class);
+                startService(playerServiceIntent); // Khởi động dịch vụ như Foreground Service
+                doBindService();
+            } else {
+                Toast.makeText(this, "Permission denied to access storage", Toast.LENGTH_SHORT).show();
+            }
         });
+
+        storagePermissionLauncher.launch(permission);
     }
 
     private void doBindService() {
@@ -114,11 +121,12 @@ public class MusicPlayerActivity extends AppCompatActivity {
             PlayerService.ServiceBinder binder = (PlayerService.ServiceBinder) service;
             player = binder.getService().player;
             isBound = true;
-            storagePermissionLauncher.launch(permission);
         }
 
         @Override
-        public void onServiceDisconnected(ComponentName name) {}
+        public void onServiceDisconnected(ComponentName name) {
+            isBound = false;
+        }
     };
 
     @Override
@@ -146,7 +154,7 @@ public class MusicPlayerActivity extends AppCompatActivity {
         try {
             mediaPlayer.setDataSource(currentSong.getPath());
             mediaPlayer.prepare();
-            mediaPlayer.start(); // Sửa lỗi ở đây bằng cách bỏ dòng dư
+            mediaPlayer.start();
             seekBar.setProgress(0);
             seekBar.setMax(mediaPlayer.getDuration());
             isPlaying = true;
