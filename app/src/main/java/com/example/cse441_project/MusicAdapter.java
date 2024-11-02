@@ -64,14 +64,14 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder>{
         return songsList.size();
     }
 
-    public void filterList(ArrayList<AudioModel> filteredList) {
 
+    @SuppressLint("NotifyDataSetChanged")
+    public void filterSongs(ArrayList<AudioModel> filteredList){
         songsList = filteredList;
         notifyDataSetChanged();
     }
 
-
-    public class ViewHolder extends RecyclerView.ViewHolder{
+    public static class ViewHolder extends RecyclerView.ViewHolder{
 
     TextView titleTextView;
     ImageView iconView;

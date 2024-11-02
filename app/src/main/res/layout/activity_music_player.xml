@@ -23,18 +23,7 @@
         android:textColor="@color/white"
         android:textSize="20sp" />
 
-    <de.hdodenhof.circleimageview.CircleImageView
-        android:id="@+id/music_image"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/controls"
-        android:layout_marginTop="100dp"
-        android:layout_marginLeft="100dp"
-        android:layout_marginBottom="90dp"
-        android:paddingBottom="20dp"
-        android:src="@drawable/musicicon"/>
-
-<!--    <de.hdodenhof.circleimageview.CircleImageView-->
+    <!--    <de.hdodenhof.circleimageview.CircleImageView-->
 <!--        android:id="@+id/music_image"-->
 <!--        android:layout_width="150dp"-->
 <!--        android:layout_height="150dp"-->
@@ -43,6 +32,21 @@
 <!--        android:layout_marginBottom="150dp"-->
 <!--        android:paddingBottom="20dp"-->
 <!--        android:src="@drawable/musicicon" />-->
+
+    <de.hdodenhof.circleimageview.CircleImageView
+        android:id="@+id/music_image"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/controls"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginStart="92dp"
+        android:layout_marginLeft="100dp"
+        android:layout_marginTop="100dp"
+        android:layout_marginEnd="92dp"
+        android:layout_marginBottom="71dp"
+        android:paddingBottom="20dp"
+        android:src="@drawable/musicicon" />
 
     <RelativeLayout
          android:layout_width="match_parent"

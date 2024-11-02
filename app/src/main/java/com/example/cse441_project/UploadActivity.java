@@ -1,17 +1,14 @@
 package com.example.cse441_project;
 
-import static java.util.Locale.filter;
 
 import android.Manifest;
-import android.app.SearchManager;
-import android.content.Context;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
@@ -27,6 +24,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class UploadActivity extends AppCompatActivity {
 
@@ -42,7 +40,10 @@ public class UploadActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_upload);
 
-        searchView = findViewById(R.id.searchView);
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        Objects.requireNonNull(getSupportActionBar()).setTitle(getResources().getString(R.string.app_name));
+
 
         recyclerView = findViewById(R.id.recycle_view);
         noMusicTextView = findViewById(R.id.No_Songs);
@@ -51,21 +52,6 @@ public class UploadActivity extends AppCompatActivity {
         MusicAdapter =new MusicAdapter(SongsList, getApplicationContext());
         recyclerView.setAdapter(MusicAdapter);
 
-
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener(){
-
-            @Override
-            public boolean onQueryTextSubmit(String query){
-                return false;
-
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                filter(newText);
-                return true;
-            }
-        });
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -84,15 +70,16 @@ public class UploadActivity extends AppCompatActivity {
         };
         String selection = MediaStore.Audio.Media.IS_MUSIC + "!= 0";
 
+        @SuppressLint("Recycle")
         Cursor cursor = getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, projection, selection, null, null
         );
 
-        while (cursor.moveToNext()) {
+        while (Objects.requireNonNull(cursor).moveToNext()) {
             AudioModel songData = new AudioModel(cursor.getString(1), cursor.getString(0), cursor.getString(2));
             if (new File(songData.getPath()).exists())
                 SongsList.add(songData);
         }
-        if (SongsList.size() == 0) {
+        if (SongsList.isEmpty()) {
             noMusicTextView.setVisibility(View.VISIBLE);
         } else {
             //recyclerView
@@ -101,18 +88,6 @@ public class UploadActivity extends AppCompatActivity {
         }
     }
 
-    private void filter(String newText) {
-
-        ArrayList<AudioModel> filteredList = new ArrayList<>();
-
-        for (AudioModel item : SongsList) {
-            if (item.getTitle().toLowerCase().contains(newText.toLowerCase())) {
-                filteredList.add(item);
-            }
-            MusicAdapter.filterList(filteredList);
-        }
-
-    }
 
 
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
@@ -129,7 +104,54 @@ public class UploadActivity extends AppCompatActivity {
     }
 
 
+    public boolean onCreateOptionsMenu(Menu menu){
+        getMenuInflater().inflate(R.menu.search_btn, menu);
 
+        //search btn item
+        MenuItem menuItem = menu.findItem(R.id.searchView);
+        searchView = (SearchView) menuItem.getActionView();
+
+        //search song method
+        SearchSong(Objects.requireNonNull(searchView));
+
+        return super.onCreateOptionsMenu(menu);
+
+    }
+
+    private void SearchSong(SearchView searchView) {
+
+        //search view listener
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                //filter songs
+                filterSongs(newText.toLowerCase());
+                return true;
+            }
+        });
+    }
+    private void filterSongs(String query) {
+        ArrayList<AudioModel> filteredList = new ArrayList<>();
+
+        if(!SongsList.isEmpty()){
+            for(AudioModel song : SongsList){
+                if (song.getTitle().toLowerCase().contains(query)){
+                    filteredList.add(song);
+                }
+            }
+
+            if (MusicAdapter != null){
+                MusicAdapter.filterSongs(filteredList);
+            }
+        }
+
+
+    }
 
 
 }
