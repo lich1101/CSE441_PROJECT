@@ -30,10 +30,11 @@ public class UploadActivity extends AppCompatActivity {
 
     RecyclerView recyclerView;
     TextView noMusicTextView;
-    MusicAdapter MusicAdapter;
+    MusicAdapter musicAdapter;
     SearchView searchView;
 
-    ArrayList<AudioModel> SongsList =  new ArrayList<>();
+    ArrayList<AudioModel> songsList = new ArrayList<>();
+    ArrayList<AudioModel> songsListAll = new ArrayList<>(); // New list to keep all songs
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,83 +45,77 @@ public class UploadActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         Objects.requireNonNull(getSupportActionBar()).setTitle(getResources().getString(R.string.app_name));
 
-
         recyclerView = findViewById(R.id.recycle_view);
         noMusicTextView = findViewById(R.id.No_Songs);
 
+        musicAdapter = new MusicAdapter(songsList, getApplicationContext());
+        recyclerView.setAdapter(musicAdapter);
 
-        MusicAdapter =new MusicAdapter(SongsList, getApplicationContext());
-        recyclerView.setAdapter(MusicAdapter);
-
-
-
+        // Kiểm tra và yêu cầu quyền truy cập
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (!checkPermission()) {
                 requestPermission();
-                return ;
+                return;
             }
         }
+
+        loadSongs();
+
+        if (songsList.isEmpty()) {
+            noMusicTextView.setVisibility(View.VISIBLE);
+        } else {
+            recyclerView.setLayoutManager(new LinearLayoutManager(this));
+            recyclerView.setAdapter(musicAdapter);
+        }
+    }
+
+    private void loadSongs() {
         String[] projection = {
                 MediaStore.Audio.Media.TITLE,
                 MediaStore.Audio.Media.DATA,
-                MediaStore.Audio.Media.DURATION,
-                MediaStore.Audio.Media.ARTIST,
-                MediaStore.Audio.Media._ID,
-                MediaStore.Audio.Media.SIZE
+                MediaStore.Audio.Media.DURATION
         };
         String selection = MediaStore.Audio.Media.IS_MUSIC + "!= 0";
 
         @SuppressLint("Recycle")
-        Cursor cursor = getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, projection, selection, null, null
-        );
+        Cursor cursor = getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, projection, selection, null, null);
 
         while (Objects.requireNonNull(cursor).moveToNext()) {
             AudioModel songData = new AudioModel(cursor.getString(1), cursor.getString(0), cursor.getString(2));
-            if (new File(songData.getPath()).exists())
-                SongsList.add(songData);
-        }
-        if (SongsList.isEmpty()) {
-            noMusicTextView.setVisibility(View.VISIBLE);
-        } else {
-            //recyclerView
-            recyclerView.setLayoutManager(new LinearLayoutManager(this));
-            recyclerView.setAdapter(new MusicAdapter(SongsList, getApplicationContext()));
+            if (new File(songData.getPath()).exists()) {
+                songsList.add(songData);
+                songsListAll.add(songData); // Add to both lists
+            }
         }
     }
 
-
-
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
-    boolean checkPermission(){
-        int result = ContextCompat.checkSelfPermission(UploadActivity.this, android.Manifest.permission.READ_MEDIA_AUDIO);
+    boolean checkPermission() {
+        int result = ContextCompat.checkSelfPermission(UploadActivity.this, Manifest.permission.READ_MEDIA_AUDIO);
         return result == PackageManager.PERMISSION_GRANTED;
     }
+
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
-    void requestPermission(){
-        if(ActivityCompat.shouldShowRequestPermissionRationale(UploadActivity.this, android.Manifest.permission.READ_MEDIA_AUDIO)){
-            Toast.makeText(UploadActivity.this,"PERMISSION NEEDED",Toast.LENGTH_SHORT).show();
-        }else
-            ActivityCompat.requestPermissions(UploadActivity.this,new String[]{Manifest.permission.READ_MEDIA_AUDIO},200);
+    void requestPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(UploadActivity.this, Manifest.permission.READ_MEDIA_AUDIO)) {
+            Toast.makeText(UploadActivity.this, "PERMISSION NEEDED", Toast.LENGTH_SHORT).show();
+        } else
+            ActivityCompat.requestPermissions(UploadActivity.this, new String[]{Manifest.permission.READ_MEDIA_AUDIO}, 200);
     }
 
-
-    public boolean onCreateOptionsMenu(Menu menu){
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.search_btn, menu);
 
-        //search btn item
         MenuItem menuItem = menu.findItem(R.id.searchView);
         searchView = (SearchView) menuItem.getActionView();
 
-        //search song method
-        SearchSong(Objects.requireNonNull(searchView));
+        SearchSong(searchView);
 
         return super.onCreateOptionsMenu(menu);
-
     }
 
     private void SearchSong(SearchView searchView) {
-
-        //search view listener
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
@@ -129,29 +124,33 @@ public class UploadActivity extends AppCompatActivity {
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                //filter songs
                 filterSongs(newText.toLowerCase());
                 return true;
             }
         });
     }
+
     private void filterSongs(String query) {
         ArrayList<AudioModel> filteredList = new ArrayList<>();
 
-        if(!SongsList.isEmpty()){
-            for(AudioModel song : SongsList){
-                if (song.getTitle().toLowerCase().contains(query)){
+        if (!query.isEmpty()) {
+            for (AudioModel song : songsListAll) {
+                if (song.getTitle().toLowerCase().contains(query)) {
                     filteredList.add(song);
                 }
             }
-
-            if (MusicAdapter != null){
-                MusicAdapter.filterSongs(filteredList);
-            }
+        } else {
+            filteredList.addAll(songsListAll); // Show all if search is cleared
         }
 
+        // Update the adapter with the filtered list
+        musicAdapter.filterSongs(filteredList);
 
+        // Show "No Songs" text if filtered list is empty
+        if (filteredList.isEmpty()) {
+            noMusicTextView.setVisibility(View.VISIBLE);
+        } else {
+            noMusicTextView.setVisibility(View.GONE);
+        }
     }
-
-
 }
