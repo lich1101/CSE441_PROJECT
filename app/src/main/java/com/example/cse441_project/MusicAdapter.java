@@ -65,9 +65,11 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder>{
     }
 
 
+
+    // Method to update the list with filtered songs
     @SuppressLint("NotifyDataSetChanged")
-    public void filterSongs(ArrayList<AudioModel> filteredList){
-        songsList = filteredList;
+    public void filterSongs(ArrayList<AudioModel> filteredList) {
+        this.songsList = filteredList;
         notifyDataSetChanged();
     }
 
