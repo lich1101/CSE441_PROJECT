@@ -1,9 +1,5 @@
 package com.example.cse441_project;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.annotation.SuppressLint;
 import android.app.NotificationManager;
 import android.content.ComponentName;
@@ -25,9 +21,10 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.android.exoplayer2.ExoPlayer;
-
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
@@ -36,22 +33,34 @@ public class MusicPlayerActivity extends AppCompatActivity {
 
     TextView titleTv, currentTv, totalTv;
     SeekBar seekBar;
-    ImageView pause, play, pause_play, music_Icon;
+    ImageView pause, play, pause_play, musicIcon;
     ArrayList<AudioModel> songsList;
     AudioModel currentSong;
     MediaPlayer mediaPlayer = MyMediaPlayer.getInstance();
     int position = 0;
-    boolean isPlaying = false;
     boolean isBound = false;
-    ExoPlayer player;
+    private PlayerService playerService;
     private static final String permission = android.Manifest.permission.READ_EXTERNAL_STORAGE;
     private ActivityResultLauncher<String> storagePermissionLauncher;
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            PlayerService.ServiceBinder binder = (PlayerService.ServiceBinder) service;
+            playerService = binder.getService();
+            isBound = true;
+        }
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            isBound = false;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music_player);
 
+        // Initialize views
         titleTv = findViewById(R.id.Songtitle);
         currentTv = findViewById(R.id.current_time);
         totalTv = findViewById(R.id.total_time);
@@ -59,13 +68,25 @@ public class MusicPlayerActivity extends AppCompatActivity {
         pause = findViewById(R.id.previous);
         play = findViewById(R.id.next);
         pause_play = findViewById(R.id.pause_play);
-        music_Icon = findViewById(R.id.music_image);
-
+        musicIcon = findViewById(R.id.music_image);
         titleTv.setSelected(true);
+
         songsList = (ArrayList<AudioModel>) getIntent().getSerializableExtra("LIST");
         setResourceWithMusic();
 
-        // Thiết lập Handler cập nhật thời gian và trạng thái nút play/pause
+        // Permission request and background service start
+        storagePermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+            if (isGranted) {
+                Intent serviceIntent = new Intent(this, PlayerService.class);
+                ContextCompat.startForegroundService(this, serviceIntent);
+                bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+            } else {
+                Toast.makeText(this, "Permission denied to access storage", Toast.LENGTH_SHORT).show();
+            }
+        });
+        storagePermissionLauncher.launch(permission);
+
+        // Handler to update progress and play/pause status
         Handler handler = new Handler(Looper.getMainLooper());
         handler.postDelayed(new Runnable() {
             @Override
@@ -79,67 +100,22 @@ public class MusicPlayerActivity extends AppCompatActivity {
             }
         }, 100);
 
+        // Button listeners
         pause_play.setOnClickListener(v -> pausePlay());
         play.setOnClickListener(v -> playNextSong());
         pause.setOnClickListener(v -> playPreviousSong());
 
+        // Seekbar listener
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (mediaPlayer != null && fromUser) mediaPlayer.seekTo(progress);
             }
-
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {}
         });
-
-        // Yêu cầu quyền và khởi động dịch vụ nền
-        storagePermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-            if (isGranted) {
-                Intent playerServiceIntent = new Intent(this, PlayerService.class);
-                startService(playerServiceIntent); // Khởi động dịch vụ như Foreground Service
-                doBindService();
-            } else {
-                Toast.makeText(this, "Permission denied to access storage", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        storagePermissionLauncher.launch(permission);
-    }
-
-    private void doBindService() {
-        Intent playerServiceIntent = new Intent(this, PlayerService.class);
-        bindService(playerServiceIntent, playerServiceConnection, Context.BIND_AUTO_CREATE);
-        isBound = true;
-    }
-
-    private final ServiceConnection playerServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            PlayerService.ServiceBinder binder = (PlayerService.ServiceBinder) service;
-            player = binder.getService().player;
-            isBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            isBound = false;
-        }
-    };
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        doUnBindService();
-    }
-
-    private void doUnBindService() {
-        if (isBound) {
-            unbindService(playerServiceConnection);
-            isBound = false;
-        }
     }
 
     private void setResourceWithMusic() {
@@ -157,8 +133,6 @@ public class MusicPlayerActivity extends AppCompatActivity {
             mediaPlayer.start();
             seekBar.setProgress(0);
             seekBar.setMax(mediaPlayer.getDuration());
-            isPlaying = true;
-
             setAlbumArt(currentSong.getPath());
             startAnimation();
         } catch (IOException e) {
@@ -168,16 +142,14 @@ public class MusicPlayerActivity extends AppCompatActivity {
 
     private void playNextSong() {
         if (MyMediaPlayer.currentIndex == songsList.size() - 1) return;
-
-        MyMediaPlayer.currentIndex += 1;
+        MyMediaPlayer.currentIndex++;
         mediaPlayer.reset();
         setResourceWithMusic();
     }
 
     private void playPreviousSong() {
         if (MyMediaPlayer.currentIndex == 0) return;
-
-        MyMediaPlayer.currentIndex -= 1;
+        MyMediaPlayer.currentIndex--;
         mediaPlayer.reset();
         setResourceWithMusic();
     }
@@ -185,35 +157,27 @@ public class MusicPlayerActivity extends AppCompatActivity {
     private void pausePlay() {
         if (mediaPlayer.isPlaying()) {
             mediaPlayer.pause();
-            isPlaying = false;
             pause_play.setImageResource(R.drawable.ic_baseline_play_circle_filled_24);
-            music_Icon.clearAnimation();
+            musicIcon.clearAnimation();
         } else {
             mediaPlayer.start();
-            isPlaying = true;
             pause_play.setImageResource(R.drawable.ic_baseline_pause_circle_filled_24);
             startAnimation();
         }
     }
 
     @SuppressLint("DefaultLocale")
-    private static String convertToMMSS(String duration) {
+    private String convertToMMSS(String duration) {
         long millis = Long.parseLong(duration);
-        return String.format("%02d:%02d",
-                TimeUnit.MILLISECONDS.toMinutes(millis) % TimeUnit.HOURS.toMinutes(1),
-                TimeUnit.MILLISECONDS.toSeconds(millis) % TimeUnit.MINUTES.toSeconds(1));
+        return String.format("%02d:%02d", TimeUnit.MILLISECONDS.toMinutes(millis) % TimeUnit.HOURS.toMinutes(1), TimeUnit.MILLISECONDS.toSeconds(millis) % TimeUnit.MINUTES.toSeconds(1));
     }
 
     private void startAnimation() {
-        RotateAnimation rotateAnimation = new RotateAnimation(
-                0f, 360f,
-                RotateAnimation.RELATIVE_TO_SELF, 0.5f,
-                RotateAnimation.RELATIVE_TO_SELF, 0.5f
-        );
+        RotateAnimation rotateAnimation = new RotateAnimation(0f, 360f, RotateAnimation.RELATIVE_TO_SELF, 0.5f, RotateAnimation.RELATIVE_TO_SELF, 0.5f);
         rotateAnimation.setDuration(5000);
         rotateAnimation.setRepeatCount(Animation.INFINITE);
         rotateAnimation.setInterpolator(new LinearInterpolator());
-        music_Icon.startAnimation(rotateAnimation);
+        musicIcon.startAnimation(rotateAnimation);
     }
 
     private void setAlbumArt(String filepath) throws IOException {
@@ -221,10 +185,19 @@ public class MusicPlayerActivity extends AppCompatActivity {
         retriever.setDataSource(filepath);
         byte[] art = retriever.getEmbeddedPicture();
         if (art != null) {
-            music_Icon.setImageBitmap(BitmapFactory.decodeByteArray(art, 0, art.length));
+            musicIcon.setImageBitmap(BitmapFactory.decodeByteArray(art, 0, art.length));
         } else {
-            music_Icon.setImageResource(R.drawable.musicicon);
+            musicIcon.setImageResource(R.drawable.musicicon);
         }
         retriever.release();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (isBound) {
+            unbindService(serviceConnection);
+            isBound = false;
+        }
     }
 }
