@@ -1,6 +1,8 @@
 <resources>
-    <string name="app_name">CSE441_PROJECT</string>
+    <string name="app_name">MyMusic</string>
     <string name="signup">Bạn chưa là thành viên? Hãy đăng ký</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <item name="searchView" type="id" />
+
 </resources>

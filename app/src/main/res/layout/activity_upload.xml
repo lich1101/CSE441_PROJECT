@@ -7,17 +7,33 @@
     android:background="@color/black"
     tools:context=".UploadActivity">
 
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/grey"
+        android:theme="@style/ThemeOverlay.AppCompat.ActionBar">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:menu="@menu/search_btn" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
     <TextView
+        android:id="@+id/songs"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/songs"
         android:text="SONGS"
         android:textColor="@color/white"
         android:textStyle="bold"
         android:layout_centerHorizontal="true"
         android:textSize="20sp"
-        android:padding="10dp"/>
-
+        android:visibility="gone"
+        android:padding="10dp" />
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -28,11 +44,10 @@
         />
 
     <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycle_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/recycle_view"
-        android:layout_below="@id/songs"
-
-        />
+        android:layout_below="@+id/appbar"
+        android:layout_marginTop="0dp"/>
 
 </RelativeLayout>

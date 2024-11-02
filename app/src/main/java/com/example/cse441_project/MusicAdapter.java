@@ -1,27 +1,36 @@
 package com.example.cse441_project;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 
 import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Filter;
+import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder>{
 
-    ArrayList<AudioModel>songsList;
+    ArrayList<AudioModel> songsList = new ArrayList<>();
     Context context;
+
+
 
     public MusicAdapter(ArrayList<AudioModel> songsList, Context context){
         this.songsList = songsList;
         this.context = context;
     }
+
+
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -52,11 +61,17 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder>{
 
     @Override
     public int getItemCount() {
-
         return songsList.size();
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder{
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void filterSongs(ArrayList<AudioModel> filteredList){
+        songsList = filteredList;
+        notifyDataSetChanged();
+    }
+
+    public static class ViewHolder extends RecyclerView.ViewHolder{
 
     TextView titleTextView;
     ImageView iconView;
